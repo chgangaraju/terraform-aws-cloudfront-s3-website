@@ -3,9 +3,13 @@ provider "aws" {
   alias  = "aws_cloudfront"
 }
 
+locals {
+  acm_certificate_domain = coalesce(var.acm_certificate_domain, "*.${var.hosted_zone}")
+}
+
 data "aws_acm_certificate" "acm_cert" {
-  domain   = "*.${var.hosted_zone}"
-  provider = "aws.aws_cloudfront"
+  domain   = local.acm_certificate_domain
+  provider = aws.aws_cloudfront
 
   //CloudFront uses certificates from US-EAST-1 region only
 
@@ -30,42 +34,41 @@ data "aws_iam_policy_document" "s3_bucket_policy" {
       type = "AWS"
 
       identifiers = [
-        "${aws_cloudfront_origin_access_identity.origin_access_identity.iam_arn}",
+        aws_cloudfront_origin_access_identity.origin_access_identity.iam_arn,
       ]
     }
   }
 }
 
 resource "aws_s3_bucket" "s3_bucket" {
-  bucket = "${var.domain_name}"
+  bucket = var.domain_name
   acl    = "private"
-  region = "${var.aws_region}"
 
   versioning {
     enabled = true
   }
 
-  policy = "${data.aws_iam_policy_document.s3_bucket_policy.json}"
+  policy = data.aws_iam_policy_document.s3_bucket_policy.json
 
-  tags = "${var.tags}"
+  tags = var.tags
 }
 
 data "aws_route53_zone" "domain_name" {
-  name         = "${var.hosted_zone}"
+  name         = var.hosted_zone
   private_zone = false
 }
 
 resource "aws_route53_record" "route53_record" {
   depends_on = [
-    "aws_cloudfront_distribution.s3_distribution",
+    aws_cloudfront_distribution.s3_distribution
   ]
 
-  zone_id = "${data.aws_route53_zone.domain_name.zone_id}"
-  name    = "${var.domain_name}"
+  zone_id = data.aws_route53_zone.domain_name.zone_id
+  name    = var.domain_name
   type    = "A"
 
   alias {
-    name    = "${aws_cloudfront_distribution.s3_distribution.domain_name}"
+    name    = aws_cloudfront_distribution.s3_distribution.domain_name
     zone_id = "Z2FDTNDATAQYW2"
 
     //HardCoded value for CloudFront
@@ -75,7 +78,7 @@ resource "aws_route53_record" "route53_record" {
 
 resource "aws_cloudfront_distribution" "s3_distribution" {
   depends_on = [
-    "aws_s3_bucket.s3_bucket",
+    aws_s3_bucket.s3_bucket
   ]
 
   origin {
@@ -83,7 +86,7 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
     origin_id   = "s3-cloudfront"
 
     s3_origin_config {
-      origin_access_identity = "${aws_cloudfront_origin_access_identity.origin_access_identity.cloudfront_access_identity_path}"
+      origin_access_identity = aws_cloudfront_origin_access_identity.origin_access_identity.cloudfront_access_identity_path
     }
   }
 
@@ -92,7 +95,7 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
   default_root_object = "index.html"
 
   aliases = [
-    "${var.domain_name}",
+    var.domain_name,
   ]
 
   default_cache_behavior {
@@ -132,7 +135,7 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
     }
   }
   viewer_certificate {
-    acm_certificate_arn      = "${data.aws_acm_certificate.acm_cert.arn}"
+    acm_certificate_arn      = data.aws_acm_certificate.acm_cert.arn
     ssl_support_method       = "sni-only"
     minimum_protocol_version = "TLSv1"
   }
@@ -142,7 +145,9 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
     error_caching_min_ttl = 0
     response_page_path    = "/"
   }
-  tags = "${var.tags}"
+
+  wait_for_deployment = false
+  tags = var.tags
 }
 
 resource "aws_cloudfront_origin_access_identity" "origin_access_identity" {
