@@ -3,6 +3,12 @@ provider "aws" {
   alias  = "aws_cloudfront"
 }
 
+locals {
+  default_certs = var.use_default_domain ? ["default"] : []
+  acm_certs     = var.use_default_domain ? [] : ["acm"]
+  domain_name   = var.use_default_domain ? [] : [var.domain_name]
+}
+
 data "aws_acm_certificate" "acm_cert" {
   count    = var.use_default_domain ? 0 : 1
   domain   = coalesce(var.acm_certificate_domain, "*.${var.hosted_zone}")
@@ -71,7 +77,7 @@ resource "aws_route53_record" "route53_record" {
   type    = "A"
 
   alias {
-    name    = aws_cloudfront_distribution.s3_distribution[0].domain_name
+    name    = aws_cloudfront_distribution.s3_distribution.domain_name
     zone_id = "Z2FDTNDATAQYW2"
 
     //HardCoded value for CloudFront
@@ -80,7 +86,6 @@ resource "aws_route53_record" "route53_record" {
 }
 
 resource "aws_cloudfront_distribution" "s3_distribution" {
-  count = var.use_default_domain ? 0 : 1
   depends_on = [
     aws_s3_bucket.s3_bucket
   ]
@@ -98,7 +103,7 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
   is_ipv6_enabled     = true
   default_root_object = "index.html"
 
-  aliases = [var.domain_name]
+  aliases = local.domain_name
 
   default_cache_behavior {
     allowed_methods = [
@@ -134,78 +139,22 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
       restriction_type = "none"
     }
   }
-  viewer_certificate {
-    acm_certificate_arn      = data.aws_acm_certificate.acm_cert[0].arn
-    ssl_support_method       = "sni-only"
-    minimum_protocol_version = "TLSv1"
-  }
-  custom_error_response {
-    error_code            = 403
-    response_code         = 200
-    error_caching_min_ttl = 0
-    response_page_path    = "/"
-  }
-
-  wait_for_deployment = false
-  tags                = var.tags
-}
-
-resource "aws_cloudfront_distribution" "s3_distribution_with_default_domain" {
-  count = var.use_default_domain ? 1 : 0
-  depends_on = [
-    aws_s3_bucket.s3_bucket
-  ]
-
-  origin {
-    domain_name = "${var.domain_name}.s3.amazonaws.com"
-    origin_id   = "s3-cloudfront"
-
-    s3_origin_config {
-      origin_access_identity = aws_cloudfront_origin_access_identity.origin_access_identity.cloudfront_access_identity_path
+  dynamic "viewer_certificate" {
+    for_each = local.default_certs
+    content {
+      cloudfront_default_certificate = true
     }
   }
 
-  enabled             = true
-  is_ipv6_enabled     = true
-  default_root_object = "index.html"
-
-  default_cache_behavior {
-    allowed_methods = [
-      "GET",
-      "HEAD",
-    ]
-
-    cached_methods = [
-      "GET",
-      "HEAD",
-    ]
-
-    target_origin_id = "s3-cloudfront"
-
-    forwarded_values {
-      query_string = false
-
-      cookies {
-        forward = "none"
-      }
-    }
-
-    viewer_protocol_policy = "redirect-to-https"
-    min_ttl                = 0
-    default_ttl            = 86400
-    max_ttl                = 31536000
-  }
-
-  price_class = var.price_class
-
-  restrictions {
-    geo_restriction {
-      restriction_type = "none"
+  dynamic "viewer_certificate" {
+    for_each = local.acm_certs
+    content {
+      acm_certificate_arn      = data.aws_acm_certificate.acm_cert[0].arn
+      ssl_support_method       = "sni-only"
+      minimum_protocol_version = "TLSv1"
     }
   }
-  viewer_certificate {
-    cloudfront_default_certificate = true
-  }
+
   custom_error_response {
     error_code            = 403
     response_code         = 200
