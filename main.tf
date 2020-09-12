@@ -6,7 +6,7 @@ provider "aws" {
 locals {
   default_certs = var.use_default_domain ? ["default"] : []
   acm_certs     = var.use_default_domain ? [] : ["acm"]
-  domain_name   = var.use_default_domain ? [] : [var.domain_name]
+  domain_name   = [var.domain_name]
 }
 
 data "aws_acm_certificate" "acm_cert" {
@@ -103,7 +103,7 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
   is_ipv6_enabled     = true
   default_root_object = "index.html"
 
-  aliases = var.domain_name
+  aliases = local.domain_name
 
   default_cache_behavior {
     allowed_methods = [
