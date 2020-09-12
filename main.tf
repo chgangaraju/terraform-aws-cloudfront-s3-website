@@ -103,7 +103,7 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
   is_ipv6_enabled     = true
   default_root_object = "index.html"
 
-  aliases = local.domain_name
+  aliases = var.domain_name
 
   default_cache_behavior {
     allowed_methods = [
