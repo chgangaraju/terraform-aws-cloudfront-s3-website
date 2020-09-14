@@ -61,13 +61,13 @@ resource "aws_s3_bucket_object" "object" {
 }
 
 data "aws_route53_zone" "domain_name" {
-  count        = var.use_default_domain or !var.route53_record ? 0 : 1
+  count        = var.use_default_domain || !var.route53_record ? 0 : 1
   name         = var.hosted_zone
   private_zone = false
 }
 
 resource "aws_route53_record" "route53_record" {
-  count = var.use_default_domain or !var.route53_record ? 0 : 1
+  count = var.use_default_domain || !var.route53_record ? 0 : 1
   depends_on = [
     aws_cloudfront_distribution.s3_distribution
   ]

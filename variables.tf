@@ -34,6 +34,5 @@ variable "upload_sample_file" {
 }
 
 variable "route53_record" {
-  default = true
-  type    = boolean
+  default = true  
 }
