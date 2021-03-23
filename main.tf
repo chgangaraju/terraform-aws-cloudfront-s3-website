@@ -50,8 +50,8 @@ resource "aws_s3_bucket" "s3_bucket" {
   policy = data.aws_iam_policy_document.s3_bucket_policy.json
   tags   = var.tags
   website {
-    index_document = "index.html"
-    error_document = "error.html"
+    index_document = var.website_index
+    error_document = var.website_error
   }
 }
 

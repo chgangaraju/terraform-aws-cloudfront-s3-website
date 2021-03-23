@@ -2,6 +2,18 @@ variable "domain_name" {
   description = "domain name (or application name if no domain name available)"
 }
 
+variable "website_index" {
+  type        = string
+  default     = "index.html"
+  description = "S3 > Properties > Static website hosting > index document"
+}
+
+variable "website_error" {
+  type        = string
+  default     = null
+  description = "S3 > Properties > Static website hosting > error document"
+}
+
 variable "tags" {
   type        = map(string)
   default     = {}
