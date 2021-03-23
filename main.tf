@@ -95,11 +95,20 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
   ]
 
   origin {
-    domain_name = aws_s3_bucket.s3_bucket.bucket_regional_domain_name
-    origin_id   = "S3-Website-${aws_s3_bucket.s3_bucket.bucket_regional_domain_name}"
+    domain_name = aws_s3_bucket.s3_bucket.website_endpoint
+    origin_id   = "S3-Website-${aws_s3_bucket.s3_bucket.website_endpoint}"
 
-    s3_origin_config {
-      origin_access_identity = aws_cloudfront_origin_access_identity.origin_access_identity.cloudfront_access_identity_path
+    custom_origin_config {
+      http_port                = 80
+      https_port               = 443
+      origin_keepalive_timeout = 5
+      origin_protocol_policy   = "http-only"
+      origin_read_timeout      = 30
+      origin_ssl_protocols = [
+        "TLSv1",
+        "TLSv1.1",
+        "TLSv1.2"
+      ]
     }
   }
 
@@ -120,7 +129,7 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
       "HEAD",
     ]
 
-    target_origin_id = "s3-cloudfront"
+    target_origin_id = "S3-Website-${aws_s3_bucket.s3_bucket.website_endpoint}"
 
     forwarded_values {
       query_string = false
@@ -162,8 +171,8 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
   custom_error_response {
     error_code            = 403
     response_code         = 200
-    error_caching_min_ttl = 0
-    response_page_path    = "/"
+    error_caching_min_ttl = 10
+    response_page_path    = "/index.html"
   }
 
   wait_for_deployment = false
