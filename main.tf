@@ -49,6 +49,10 @@ resource "aws_s3_bucket" "s3_bucket" {
   }
   policy = data.aws_iam_policy_document.s3_bucket_policy.json
   tags   = var.tags
+  website {
+    index_document = "index.html"
+    error_document = "error.html"
+  }
 }
 
 resource "aws_s3_bucket_object" "object" {
