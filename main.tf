@@ -95,8 +95,8 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
   ]
 
   origin {
-    domain_name = "${var.domain_name}.s3.amazonaws.com"
-    origin_id   = "s3-cloudfront"
+    domain_name = aws_s3_bucket.s3_bucket.bucket_regional_domain_name
+    origin_id   = "S3-Website-${aws_s3_bucket.s3_bucket.bucket_regional_domain_name}"
 
     s3_origin_config {
       origin_access_identity = aws_cloudfront_origin_access_identity.origin_access_identity.cloudfront_access_identity_path
