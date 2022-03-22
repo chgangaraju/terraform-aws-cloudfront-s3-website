@@ -11,8 +11,8 @@ The following resources will be created
 Prerequisites (Optional in example2):
 
   - Route 53 hosted zone for example.com
-  - ACM certificate for *.example.com in us-east-1 region
-  
+  - ACM certificate for `*.example.com in us-east-1 region`
+
 ### Example 1
 
     provider "aws" {
@@ -38,3 +38,17 @@ Prerequisites (Optional in example2):
         upload_sample_file     = true
     }
     
+### Cloudfront TTL settings
+
+* Cloudfront caches the static content at default values. However, if you change it constantly without recreating the bucket, you may need
+to decrease the TTL values.
+  * https://stackoverflow.com/questions/67845341/cloudfront-s3-etag-possible-for-cloudfront-to-send-updated-s3-object-before-t
+  * https://stackoverflow.com/questions/12783009/does-amazon-s3-send-invalidation-signals-to-cloudfront
+  * https://developers.google.com/speed/docs/insights/LeverageBrowserCaching
+
+```terraform
+        # optional values
+        cloudfront_min_ttl     = 10
+        cloudfront_default_ttl = 1400
+        cloudfront_max_ttl     = 86400
+```
