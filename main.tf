@@ -43,12 +43,20 @@ data "aws_iam_policy_document" "s3_bucket_policy" {
 
 resource "aws_s3_bucket" "s3_bucket" {
   bucket = var.domain_name
-  acl    = "private"
-  versioning {
-    enabled = true
-  }
   policy = data.aws_iam_policy_document.s3_bucket_policy.json
   tags   = var.tags
+}
+
+resource "aws_s3_bucket_acl" "s3_bucket" {
+  bucket = var.domain_name
+  acl = "private"
+}
+
+resource "aws_s3_bucket_versioning" "s3_bucket" {
+  bucket = var.domain_name
+  versioning_configuration {
+    status = "Enabled"
+  }
 }
 
 resource "aws_s3_bucket_object" "object" {
