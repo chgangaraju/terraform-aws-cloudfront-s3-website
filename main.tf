@@ -59,7 +59,7 @@ resource "aws_s3_bucket_versioning" "s3_bucket" {
   }
 }
 
-resource "aws_s3_bucket_object" "object" {
+resource "aws_s3_object" "object" {
   count        = var.upload_sample_file ? 1 : 0
   bucket       = aws_s3_bucket.s3_bucket.bucket
   key          = "index.html"
