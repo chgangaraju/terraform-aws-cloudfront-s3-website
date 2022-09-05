@@ -1,18 +1,18 @@
-# provider "aws" {
-#   region = "us-east-1"
-#   alias  = "aws_cloudfront"
-# }
+provider "aws" {
+  region = "us-east-1"
+  alias  = "aws_cloudfront"
+}
 
 locals {
   default_certs = var.use_default_domain ? ["default"] : []
   acm_certs     = var.use_default_domain ? [] : ["acm"]
-  domain_name   = [var.domain_name]
+  domain_name   = var.use_default_domain ? [] : [var.domain_name]
 }
 
 data "aws_acm_certificate" "acm_cert" {
   count    = var.use_default_domain ? 0 : 1
   domain   = coalesce(var.acm_certificate_domain, "*.${var.hosted_zone}")
-  # provider = aws.aws_cloudfront
+  provider = aws.aws_cloudfront
   //CloudFront uses certificates from US-EAST-1 region only
   statuses = [
     "ISSUED",
@@ -43,13 +43,17 @@ data "aws_iam_policy_document" "s3_bucket_policy" {
 
 resource "aws_s3_bucket" "s3_bucket" {
   bucket = var.domain_name
-  policy = data.aws_iam_policy_document.s3_bucket_policy.json
   tags   = var.tags
+}
+resource "aws_s3_bucket_policy" "s3_bucket_policy" {
+  bucket = aws_s3_bucket.s3_bucket.bucket
+  policy = data.aws_iam_policy_document.s3_bucket_policy.json
+
 }
 
 resource "aws_s3_bucket_acl" "s3_bucket" {
   bucket = var.domain_name
-  acl = "private"
+  acl    = "private"
 }
 
 resource "aws_s3_bucket_versioning" "s3_bucket" {
@@ -69,13 +73,13 @@ resource "aws_s3_object" "object" {
 }
 
 data "aws_route53_zone" "domain_name" {
-  count        = var.use_default_domain || !var.route53_record ? 0 : 1
+  count        = var.use_default_domain ? 0 : 1
   name         = var.hosted_zone
   private_zone = false
 }
 
 resource "aws_route53_record" "route53_record" {
-  count = var.use_default_domain || !var.route53_record ? 0 : 1
+  count      = var.use_default_domain ? 0 : 1
   depends_on = [
     aws_cloudfront_distribution.s3_distribution
   ]
@@ -135,11 +139,11 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
     }
 
     viewer_protocol_policy = "redirect-to-https"
-  
+
     # https://stackoverflow.com/questions/67845341/cloudfront-s3-etag-possible-for-cloudfront-to-send-updated-s3-object-before-t
-    min_ttl                = var.cloudfront_min_ttl
-    default_ttl            = var.cloudfront_default_ttl
-    max_ttl                = var.cloudfront_max_ttl
+    min_ttl     = var.cloudfront_min_ttl
+    default_ttl = var.cloudfront_default_ttl
+    max_ttl     = var.cloudfront_max_ttl
   }
 
   price_class = var.price_class
