@@ -8,3 +8,5 @@
 # .tfvars files
 *.tfvars
 .idea/*
+
+.terraform.*
