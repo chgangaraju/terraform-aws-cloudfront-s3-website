@@ -43,12 +43,20 @@ data "aws_iam_policy_document" "s3_bucket_policy" {
 
 resource "aws_s3_bucket" "s3_bucket" {
   bucket = var.domain_name
-  acl    = "private"
-  versioning {
-    enabled = true
-  }
   policy = data.aws_iam_policy_document.s3_bucket_policy.json
   tags   = var.tags
+}
+
+resource "aws_s3_bucket_acl" "s3_bucket" {
+  bucket = var.domain_name
+  acl = "private"
+}
+
+resource "aws_s3_bucket_versioning" "s3_bucket" {
+  bucket = var.domain_name
+  versioning_configuration {
+    status = "Enabled"
+  }
 }
 
 resource "aws_s3_bucket_object" "object" {
@@ -127,9 +135,11 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
     }
 
     viewer_protocol_policy = "redirect-to-https"
-    min_ttl                = 0
-    default_ttl            = 86400
-    max_ttl                = 31536000
+  
+    # https://stackoverflow.com/questions/67845341/cloudfront-s3-etag-possible-for-cloudfront-to-send-updated-s3-object-before-t
+    min_ttl                = var.cloudfront_min_ttl
+    default_ttl            = var.cloudfront_default_ttl
+    max_ttl                = var.cloudfront_max_ttl
   }
 
   price_class = var.price_class
@@ -159,7 +169,7 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
     error_code            = 403
     response_code         = 200
     error_caching_min_ttl = 0
-    response_page_path    = "/"
+    response_page_path    = "/index.html"
   }
 
   wait_for_deployment = false
